@@ -1,0 +1,99 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  uid        String   @id
+  email      String   @unique
+  name       String?
+  firstName  String?
+  lastName   String?
+  role       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  payments         Payment[]
+  withdrawalRequests WithdrawalRequest[]
+  jobs               Job[]
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   String
+  receiverId String
+  text       String
+  createdAt  DateTime @default(now())
+  readAt     DateTime?
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [uid])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [uid])
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, senderId, createdAt])
+  @@index([createdAt])
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  provider    String
+  action      String
+  amountCents Int
+  currency    String   @default("USD")
+  status      String   @default("demo_created")
+  externalId  String?
+  checkoutUrl String?
+  userId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [uid])
+
+  @@index([provider, externalId])
+  @@index([userId, createdAt])
+}
+
+model WithdrawalRequest {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  method      String
+  amountCents Int
+  currency    String   @default("USD")
+  destination String
+  status      String   @default("pending_review")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [uid])
+
+  @@index([userId, createdAt])
+}
+
+
+model Job {
+  id               Int      @id @default(autoincrement())
+  userId           String
+  title            String
+  client           String?
+  clientUid        String?
+  status           String   @default("pending")
+  rateType         String?
+  rateCents        Int?
+  totalEarnedCents Int      @default(0)
+  startedAt        DateTime?
+  dueAt            DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [uid])
+
+  @@index([userId, status])
+  @@index([createdAt])
+}
